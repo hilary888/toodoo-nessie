@@ -1,5 +1,6 @@
 import { config as envConfig, Drash } from "./deps.ts";
 import { HomeResource } from "./resources/home_resource.ts";
+import { TodoResource } from "./resources/todo_resource.ts";
 
 const env = envConfig();
 
@@ -9,6 +10,7 @@ const server = new Drash.Server({
   protocol: "http",
   resources: [
     HomeResource,
+    TodoResource
   ],
 });
 

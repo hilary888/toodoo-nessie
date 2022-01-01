@@ -9,3 +9,5 @@ export type {
   Info,
   NessieConfig,
 } from "https://deno.land/x/nessie@2.0.4/mod.ts";
+
+export { Dorm } from "https://deno.land/x/dorm@v1.0.0-beta.7/mod.ts";
