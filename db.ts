@@ -8,5 +8,8 @@ export const client = new Client({
     hostname: env.DB_HOSTNAME,
     port: env.DB_PORT,
     password: env.DB_PASSWORD,
+    tls: {
+        enforce: false,
+    }
 });
 

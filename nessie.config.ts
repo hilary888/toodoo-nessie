@@ -1,4 +1,4 @@
-import { ClientPostgreSQL, config as envConfig, NessieConfig } from "./deps.ts";
+import { ClientPostgreSQL, envConfig, NessieConfig } from "./deps.ts";
 
 const env = envConfig();
 
