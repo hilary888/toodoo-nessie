@@ -13,3 +13,5 @@ export type {
 export { Client } from "https://deno.land/x/postgres/mod.ts";
 
 export * as bcrypt from "https://deno.land/x/bcrypt@v0.2.4/mod.ts";
+
+export { create } from "https://deno.land/x/djwt@v2.4/mod.ts";

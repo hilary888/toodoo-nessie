@@ -1,6 +1,6 @@
-import { Drash, bcrypt } from "../deps.ts";
+import { Drash, bcrypt, create } from "../deps.ts";
 import { client } from "../db.ts";
-
+import { key } from "../utils.ts";
 
 export class RegistrationResource extends Drash.Resource {
     public paths = ["/register"];
@@ -20,6 +20,7 @@ export class RegistrationResource extends Drash.Resource {
             );
         }
 
+        // Check if email already exists in users table
         await client.connect();
         const emailExists = await client.queryObject(`
             SELECT * FROM users
@@ -34,6 +35,7 @@ export class RegistrationResource extends Drash.Resource {
             );
         }
 
+        // Create user account
         const validPassword: string = password!;
         const hashedPassword = await bcrypt.hash(validPassword);
         await client.connect();
@@ -44,8 +46,12 @@ export class RegistrationResource extends Drash.Resource {
         `);
         await client.end();
 
+        // Generate jwt token
+        const jwt = await create({ alg: "HS512", typ: "JWT" }, {}, key)
+
         return response.json({
             success: true,
+            token: jwt,
             payload: result.rows
         });
 
