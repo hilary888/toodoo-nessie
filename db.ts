@@ -1,5 +1,12 @@
-import { Dorm, config as envConfig } from "./deps.ts";
+import { Client, envConfig } from "./deps.ts";
 
 const env = envConfig();
-const dbUrl = env.dorm_databaseURL;
-export const dorm = new Dorm(dbUrl);
+
+export const client = new Client({
+    user: env.DB_USERNAME,
+    database: env.DB_NAME,
+    hostname: env.DB_HOSTNAME,
+    port: env.DB_PORT,
+    password: env.DB_PASSWORD,
+});
+

@@ -1,6 +1,7 @@
-import { config as envConfig, Drash } from "./deps.ts";
+import { envConfig, Drash } from "./deps.ts";
 import { HomeResource } from "./resources/home_resource.ts";
 import { TodoResource } from "./resources/todo_resource.ts";
+import { client } from "./db.ts";
 
 const env = envConfig();
 
@@ -13,6 +14,7 @@ const server = new Drash.Server({
     TodoResource
   ],
 });
+
 
 server.run();
 console.log(`Server running at ${server.address}.`);
