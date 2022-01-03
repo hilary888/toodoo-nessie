@@ -41,7 +41,11 @@ export class LoginResource extends Drash.Resource {
             const isValidPassword = await bcrypt.compare(plaintextPassword, hashedPassword);
 
             if (isValidPassword) {
-                const jwt = await create({ alg: "HS512", typ: "JWT" }, {sub: `${userDetails.id}`, exp: getNumericDate(60 * 60 * 8)} , key);
+                const jwt = await create({ 
+                    alg: "HS512", 
+                    typ: "JWT" }, 
+                    {sub: `${userDetails.id}`, exp: getNumericDate(60 * 60)}, 
+                    key);
                 return response.json({
                     success: true,
                     token: jwt,
