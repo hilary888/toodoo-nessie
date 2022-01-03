@@ -40,8 +40,8 @@ export class TodoResource extends Drash.Resource {
 
         await client.connect();
         const result = await client.queryObject(`
-            INSERT INTO todo (title, body)
-            VALUES ('${title}', '${body}')
+            INSERT INTO todo (title, body, user_id)
+            VALUES ('${title}', '${body}', ${userId})
             RETURNING *;
         `);
         await client.end();
@@ -59,11 +59,13 @@ export class TodoResource extends Drash.Resource {
     ): Promise<void> {
         const pathId = request.pathParam("id");
         const id = Number(pathId);
+        const payload = await getJwtPayload(request);
+        const userId = payload.sub;
 
         if(pathId !== undefined && !isNaN(id)) {
             await client.connect();
             const result = await client.queryObject(`
-                SELECT * FROM todo WHERE id = ${id};
+                SELECT * FROM todo WHERE id = ${id} AND user_id = ${userId};
             `);
             await client.end();
             return response.json({
@@ -73,7 +75,7 @@ export class TodoResource extends Drash.Resource {
         } else if (pathId === undefined) {
             await client.connect();
             const result = await client.queryObject(`
-                SELECT * FROM todo;
+                SELECT * FROM todo WHERE user_id = ${userId};
             `);
             await client.end();
             return response.json({
@@ -96,6 +98,7 @@ export class TodoResource extends Drash.Resource {
         const id = Number(pathId);
         const title = request.bodyParam("title");
         const body = request.bodyParam("body");
+        const userId = await getJwtPayload(request).then(value => value.sub);
 
         if(pathId !== undefined && !isNaN(id)) {
             await client.connect();
@@ -104,7 +107,7 @@ export class TodoResource extends Drash.Resource {
                 SET title = '${title}',
                     body = '${body}',
                     updated_at = current_timestamp
-                WHERE id = ${id}
+                WHERE id = ${id} AND user_id = ${userId}
                 RETURNING *;
             `);
             await client.end();
@@ -114,10 +117,14 @@ export class TodoResource extends Drash.Resource {
             });
         }
 
-        throw new Drash.Errors.HttpError(
-            400,
-            "Error processing request"
-        );
+        response.status = 422;
+        return response.json({
+            errors: {
+                body: {
+                    message: "Error processing request."
+                }
+            }
+        });
     }
 
     public async DELETE(
@@ -126,12 +133,13 @@ export class TodoResource extends Drash.Resource {
     ): Promise<void> {
         const pathId = request.pathParam("id");
         const id = Number(pathId);
+        const userId = await getJwtPayload(request).then(value => value.sub);
 
         if(pathId !== undefined && !isNaN(id)) {
             await client.connect();
             const result = await client.queryObject(`
                 DELETE FROM todo
-                WHERE id = ${id}
+                WHERE id = ${id} AND user_id = ${userId}
                 RETURNING *;
             `);
             await client.end();
@@ -142,9 +150,13 @@ export class TodoResource extends Drash.Resource {
             });
         }
 
-        throw new Drash.Errors.HttpError(
-            400,
-            "Error processing request"
-        )
+        response.status = 422;
+        return response.json({
+            errors: {
+                body: {
+                    message: "Error processing request."
+                }
+            }
+        });
     }
 }
