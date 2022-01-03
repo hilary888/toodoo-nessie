@@ -1,6 +1,12 @@
-import { Drash, bcrypt, create } from "../deps.ts";
+import { 
+    Drash, 
+    bcrypt, 
+    create,
+    getNumericDate,
+ } from "../deps.ts";
 import { client } from "../db.ts";
 import { key } from "../utils.ts";
+
 
 export class RegistrationResource extends Drash.Resource {
     public paths = ["/register"];
@@ -47,7 +53,7 @@ export class RegistrationResource extends Drash.Resource {
         await client.end();
 
         // Generate jwt token
-        const jwt = await create({ alg: "HS512", typ: "JWT" }, {}, key)
+        const jwt = await create({ alg: "HS512", typ: "JWT" }, {exp: getNumericDate(3 * 60 * 60)}, key)
 
         return response.json({
             success: true,
