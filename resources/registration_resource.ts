@@ -52,12 +52,8 @@ export class RegistrationResource extends Drash.Resource {
         `);
         await client.end();
 
-        // Generate jwt token
-        const jwt = await create({ alg: "HS512", typ: "JWT" }, {exp: getNumericDate(3 * 60 * 60)}, key)
-
         return response.json({
             success: true,
-            token: jwt,
             payload: result.rows
         });
 
