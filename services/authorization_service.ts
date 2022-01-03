@@ -1,4 +1,4 @@
-import { Drash, verify } from "../deps.ts";
+import { Drash, verify, Payload } from "../deps.ts";
 import { key } from "../utils.ts";
 
 export class AuthorizationService extends Drash.Service {

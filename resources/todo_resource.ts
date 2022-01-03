@@ -1,6 +1,7 @@
 import { Drash } from "../deps.ts";
 import { client } from "../db.ts";
 import { AuthorizationService } from "../services/authorization_service.ts";
+import { getJwtPayload } from "../utils.ts";
 
 export class TodoResource extends Drash.Resource {
     public paths = [
@@ -8,9 +9,10 @@ export class TodoResource extends Drash.Resource {
         "/todo/:id"
     ];
 
+    authorisationService = new AuthorizationService();
     public services = {
         ALL: [
-            new AuthorizationService(),
+            this.authorisationService,
         ]
     }
 
@@ -21,9 +23,9 @@ export class TodoResource extends Drash.Resource {
     ): Promise<void> {
         const title = request.bodyParam("title");
         const body = request.bodyParam("body");
+        const payload = await getJwtPayload(request);
+        const userId = payload.sub;
 
-        console.log("title", title);
-        console.log("body", body);
 
         if (title === undefined || body === undefined) {
             response.status = 422
