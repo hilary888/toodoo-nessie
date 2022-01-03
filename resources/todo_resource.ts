@@ -1,11 +1,18 @@
 import { Drash } from "../deps.ts";
 import { client } from "../db.ts";
+import { AuthorizationService } from "../services/authorization_service.ts";
 
 export class TodoResource extends Drash.Resource {
     public paths = [
         "/todo",
         "/todo/:id"
     ];
+
+    public services = {
+        ALL: [
+            new AuthorizationService(),
+        ]
+    }
 
     
     public async POST(
@@ -14,6 +21,20 @@ export class TodoResource extends Drash.Resource {
     ): Promise<void> {
         const title = request.bodyParam("title");
         const body = request.bodyParam("body");
+
+        console.log("title", title);
+        console.log("body", body);
+
+        if (title === undefined || body === undefined) {
+            response.status = 422
+            return response.json({
+                errors: {
+                    body: {
+                        message: "Todo title and body content should be provided",
+                    }
+                }     
+            });
+        }
 
         await client.connect();
         const result = await client.queryObject(`

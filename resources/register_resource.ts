@@ -8,7 +8,7 @@ import { client } from "../db.ts";
 import { key } from "../utils.ts";
 
 
-export class RegistrationResource extends Drash.Resource {
+export class RegisterResource extends Drash.Resource {
     public paths = ["/register"];
 
     public async POST(
@@ -52,10 +52,21 @@ export class RegistrationResource extends Drash.Resource {
         `);
         await client.end();
 
-        return response.json({
-            success: true,
-            payload: result.rows
-        });
+        if (result.rows.length > 0) {
+            return response.json({
+                success: true,
+                payload: result.rows
+            });
+        } else {
+            response.status = 422;
+            return response.json({
+                errors: {
+                    body: {
+                        message: "An error occurred while trying to create your account."
+                    }
+                }
+            });
+        }
 
     }
 }
