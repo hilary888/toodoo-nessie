@@ -38,8 +38,8 @@ export class TodoResource extends Drash.Resource {
 
         await client.connect();
         const result = await client.queryObject(`
-            INSERT INTO todo (title, body, created_at, updated_at)
-            VALUES ('${title}', '${body}', current_timestamp, current_timestamp)
+            INSERT INTO todo (title, body)
+            VALUES ('${title}', '${body}')
             RETURNING *;
         `);
         await client.end();
