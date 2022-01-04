@@ -1,4 +1,4 @@
-import { envConfig, Drash } from "./deps.ts";
+import { envConfig, Drash, dexter } from "./deps.ts";
 import { HomeResource } from "./resources/home_resource.ts";
 import { TodoResource } from "./resources/todo_resource.ts";
 import { RegisterResource } from "./resources/register_resource.ts";
@@ -6,6 +6,11 @@ import { LoginResource } from "./resources/login_resource.ts";
 import { client } from "./db.ts";
 
 const env = envConfig();
+// const dexter = new DexterService({
+//   enabled: true,
+//   url: true,
+//   method: true,
+// });
 
 const server = new Drash.Server({
   hostname: env.HOSTNAME,
@@ -17,6 +22,9 @@ const server = new Drash.Server({
     RegisterResource,
     LoginResource,
   ],
+  services: [
+    dexter,
+  ]
 });
 
 

@@ -1,12 +1,10 @@
 import { 
     Drash, 
     bcrypt, 
-    create,
-    getNumericDate,
+    dexter,
  } from "../deps.ts";
 import { client } from "../db.ts";
-import { key } from "../utils.ts";
-
+import { Users } from "../models/users_model.ts";
 
 export class RegisterResource extends Drash.Resource {
     public paths = ["/register"];
@@ -45,7 +43,7 @@ export class RegisterResource extends Drash.Resource {
         const validPassword: string = password!;
         const hashedPassword = await bcrypt.hash(validPassword);
         await client.connect();
-        const result = await client.queryObject(`
+        const result = await client.queryObject<Users>(`
             INSERT INTO users (username, email, password)
             VALUES ('${username}', '${email}', '${hashedPassword}')
             RETURNING *;
@@ -53,11 +51,14 @@ export class RegisterResource extends Drash.Resource {
         await client.end();
 
         if (result.rows.length > 0) {
+            const userDetails = result.rows[0];
+            dexter.logger.info(`Account created for ${userDetails.email}`)
             return response.json({
                 success: true,
                 payload: result.rows
             });
         } else {
+            dexter.logger.error(`Account creation for ${email} failed`);
             response.status = 422;
             return response.json({
                 errors: {

@@ -1,15 +1,7 @@
-import { Drash, bcrypt, create, getNumericDate } from "../deps.ts";
+import { Drash, bcrypt, create, getNumericDate, dexter } from "../deps.ts";
 import { client } from "../db.ts";
 import { key } from "../utils.ts";
-
-interface User {
-    id: number;
-    username: string;
-    password: string;
-    email: string;
-    created_at: string;
-    updated_at: string;
-}
+import { Users } from "../models/users_model.ts";
 export class LoginResource extends Drash.Resource {
     public paths = ["/login"];
 
@@ -28,7 +20,7 @@ export class LoginResource extends Drash.Resource {
         }
 
         await client.connect();
-        const result = await client.queryObject<User>(`
+        const result = await client.queryObject<Users>(`
             SELECT * FROM users
             WHERE email = '${email}'
             LIMIT 1;
@@ -46,6 +38,7 @@ export class LoginResource extends Drash.Resource {
                     typ: "JWT" }, 
                     {sub: `${userDetails.id}`, exp: getNumericDate(60 * 60)}, 
                     key);
+                dexter.logger.info(`Account ${userDetails.email} logged in.`);
                 return response.json({
                     success: true,
                     token: jwt,

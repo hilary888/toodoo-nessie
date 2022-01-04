@@ -1,7 +1,9 @@
-import { Drash } from "../deps.ts";
+import { Drash, dexter } from "../deps.ts";
 import { client } from "../db.ts";
 import { AuthorizationService } from "../services/authorization_service.ts";
 import { getJwtPayload } from "../utils.ts";
+import { Users } from "../models/users_model.ts";
+import { Todo } from "../models/todo_model.ts";
 
 export class TodoResource extends Drash.Resource {
     public paths = [
@@ -39,13 +41,20 @@ export class TodoResource extends Drash.Resource {
         }
 
         await client.connect();
-        const result = await client.queryObject(`
+        const result = await client.queryObject<Todo>(`
             INSERT INTO todo (title, body, user_id)
             VALUES ('${title}', '${body}', ${userId})
             RETURNING *;
         `);
+
+        const userResult = await client.queryObject<Users>(`
+            SELECT * FROM users WHERE id = ${userId};
+        `);
         await client.end();
 
+        
+
+        dexter.logger.info(`New todo created by ${userResult.rows[0].email}. id = ${result.rows[0].id}`);
         return response.json({
             success: true,
             payload: result.rows,
@@ -61,13 +70,20 @@ export class TodoResource extends Drash.Resource {
         const id = Number(pathId);
         const payload = await getJwtPayload(request);
         const userId = payload.sub;
+        await client.connect();
+        const userResult = await client.queryObject<Users>(`
+            SELECT * FROM users WHERE id = ${userId};
+        `);
+        await client.end();
 
         if(pathId !== undefined && !isNaN(id)) {
             await client.connect();
-            const result = await client.queryObject(`
+            const result = await client.queryObject<Todo>(`
                 SELECT * FROM todo WHERE id = ${id} AND user_id = ${userId};
             `);
             await client.end();
+
+            dexter.logger.info(`Todo id = ${result.rows[0].id} requested by ${userResult.rows[0].email}`);
             return response.json({
                 success: true,
                 payload: result.rows,
@@ -78,6 +94,8 @@ export class TodoResource extends Drash.Resource {
                 SELECT * FROM todo WHERE user_id = ${userId};
             `);
             await client.end();
+
+            dexter.logger.info(`All todos requested by ${userResult.rows[0].email}`)
             return response.json({
                 success: true,
                 payload: result.rows,
@@ -102,7 +120,7 @@ export class TodoResource extends Drash.Resource {
 
         if(pathId !== undefined && !isNaN(id)) {
             await client.connect();
-            const result = await client.queryObject(`
+            const result = await client.queryObject<Todo>(`
                 UPDATE todo
                 SET title = '${title}',
                     body = '${body}',
@@ -110,7 +128,13 @@ export class TodoResource extends Drash.Resource {
                 WHERE id = ${id} AND user_id = ${userId}
                 RETURNING *;
             `);
+
+            const userResult = await client.queryObject<Users>(`
+                SELECT * FROM users WHERE id = ${userId};
+            `);
             await client.end();
+
+            dexter.logger.info(`Todo id: ${result.rows[0].id} edited by ${userResult.rows[0].email}`);
             return response.json({
                 success: true,
                 payload: result.rows,
@@ -137,13 +161,17 @@ export class TodoResource extends Drash.Resource {
 
         if(pathId !== undefined && !isNaN(id)) {
             await client.connect();
-            const result = await client.queryObject(`
+            const result = await client.queryObject<Todo>(`
                 DELETE FROM todo
                 WHERE id = ${id} AND user_id = ${userId}
                 RETURNING *;
             `);
+            const userResult = await client.queryObject<Users>(`
+                SELECT * FROM users WHERE id = ${userId};
+            `);
             await client.end();
-
+            
+            dexter.logger.info(`Todo id ${result.rows[0].id} deleted by ${userResult.rows[0].email}`);
             return response.json({
                 success: true,
                 payload: result.rows
