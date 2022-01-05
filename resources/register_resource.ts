@@ -6,8 +6,9 @@ import {
 import { client } from "../db.ts";
 import { Users } from "../models/users_model.ts";
 import * as utils from "../utils.ts";
+import { BaseResource } from "./base_resource.ts";
 
-export class RegisterResource extends Drash.Resource {
+export class RegisterResource extends BaseResource {
     public paths = ["/register"];
 
     public async POST(
@@ -20,20 +21,20 @@ export class RegisterResource extends Drash.Resource {
         const password: string | undefined = request.bodyParam("password");
 
         // Check if values provided are valid
-        if(!utils.validateUsername(username) || !utils.validateEmail(email) || !utils.validatePassword(password)) {
+        if(!this.validateUsername(username) || !this.validateEmail(email) || !this.validatePassword(password)) {
             // Append message to validationResult for every invalid value
             let validationResult = {};
             
-            if(!utils.validateUsername(username)) {
-                Object.assign(validationResult, {username: `A username must be provided. : ${!utils.validateUsername(username)}`});
+            if(!this.validateUsername(username)) {
+                Object.assign(validationResult, {username: `A username must be provided`});
             }
 
-            if (!utils.validateEmail(email)) {
-                Object.assign(validationResult, {email: `An email must be provided: ${!utils.validateEmail(email)}`});
+            if (!this.validateEmail(email)) {
+                Object.assign(validationResult, {email: `An email must be provided`});
             }
 
-            if (!utils.validatePassword(password)) {
-                Object.assign(validationResult, {password: `A password of at least length 8 must be provided: ${!utils.validatePassword(password)}`});
+            if (!this.validatePassword(password)) {
+                Object.assign(validationResult, {password: `A password of at least length 8 must be provided`});
             }
 
             response.status = 422;  // Unprocessable entity
