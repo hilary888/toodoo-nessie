@@ -5,6 +5,7 @@ import {
  } from "../deps.ts";
 import { client } from "../db.ts";
 import { Users } from "../models/users_model.ts";
+import * as utils from "../utils.ts";
 
 export class RegisterResource extends Drash.Resource {
     public paths = ["/register"];
@@ -13,15 +14,33 @@ export class RegisterResource extends Drash.Resource {
         request: Drash.Request,
         response: Drash.Response
     ): Promise<void> {
+        // Get json values from request
         const username: string | undefined = request.bodyParam("username");
         const email: string | undefined = request.bodyParam("email");
         const password: string | undefined = request.bodyParam("password");
-    
-        if(username === undefined || email === undefined || password === undefined) {
-            throw new Drash.Errors.HttpError(
-                400,
-                "username, email, password need to be provided."
-            );
+
+        // Check if values provided are valid
+        if(!utils.validateUsername(username) || !utils.validateEmail(email) || !utils.validatePassword(password)) {
+            // Append message to validationResult for every invalid value
+            let validationResult = {};
+            
+            if(!utils.validateUsername(username)) {
+                Object.assign(validationResult, {username: `A username must be provided. : ${!utils.validateUsername(username)}`});
+            }
+
+            if (!utils.validateEmail(email)) {
+                Object.assign(validationResult, {email: `An email must be provided: ${!utils.validateEmail(email)}`});
+            }
+
+            if (!utils.validatePassword(password)) {
+                Object.assign(validationResult, {password: `A password of at least length 8 must be provided: ${!utils.validatePassword(password)}`});
+            }
+
+            response.status = 422;  // Unprocessable entity
+            return response.json({
+                status: "fail",
+                data: validationResult
+            });
         }
 
         // Check if email already exists in users table
@@ -33,10 +52,13 @@ export class RegisterResource extends Drash.Resource {
         await client.end();
 
         if (emailExists.rows.length > 0) {
-            throw new Drash.Errors.HttpError(
-                400,
-                "Email already exists."
-            );
+            response.status = 409   // Conflict
+            return response.json({
+                status: "fail",
+                data: {
+                    email: "Provided email already exists"
+                }
+            });
         }
 
         // Create user account
@@ -54,18 +76,15 @@ export class RegisterResource extends Drash.Resource {
             const userDetails = result.rows[0];
             dexter.logger.info(`Account created for ${userDetails.email}`)
             return response.json({
-                success: true,
-                payload: result.rows
+                status: "success",
+                data: result.rows
             });
         } else {
             dexter.logger.error(`Account creation for ${email} failed`);
-            response.status = 422;
+            response.status = 422;  // Unprocessable entity
             return response.json({
-                errors: {
-                    body: {
-                        message: "An error occurred while trying to create your account."
-                    }
-                }
+                status: "error",
+                message: "Application is unable to create account"
             });
         }
 
