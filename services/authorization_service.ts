@@ -17,7 +17,7 @@ export class AuthorizationService extends Drash.Service {
             } catch (error) {
                 throw new Drash.Errors.HttpError(
                     401,
-                    error
+                    `No or invalid JWT. Error: ${error}`
                 )
             }
         } else {

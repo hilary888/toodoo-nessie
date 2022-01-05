@@ -30,13 +30,20 @@ export class TodoResource extends Drash.Resource {
 
 
         if (title === undefined || body === undefined) {
+            const validationResult = {};
+
+            if (title === undefined) {
+                Object.assign(validationResult, {title: "Provide title for todo list"});
+            }
+
+            if (body === undefined) {
+                Object.assign(validationResult, {body: "Provide body for todo list"});
+            }
+
             response.status = 422
             return response.json({
-                errors: {
-                    body: {
-                        message: "Todo title and body content should be provided",
-                    }
-                }     
+                status: "fail",
+                data: validationResult
             });
         }
 
@@ -56,8 +63,8 @@ export class TodoResource extends Drash.Resource {
 
         dexter.logger.info(`New todo created by ${userResult.rows[0].email}. id = ${result.rows[0].id}`);
         return response.json({
-            success: true,
-            payload: result.rows,
+            status: "success",
+            data: result.rows,
         });
 
     }
@@ -77,18 +84,29 @@ export class TodoResource extends Drash.Resource {
         await client.end();
 
         if(pathId !== undefined && !isNaN(id)) {
+            // Get a specific todo created by user
             await client.connect();
             const result = await client.queryObject<Todo>(`
                 SELECT * FROM todo WHERE id = ${id} AND user_id = ${userId};
             `);
             await client.end();
 
-            dexter.logger.info(`Todo id = ${result.rows[0].id} requested by ${userResult.rows[0].email}`);
-            return response.json({
-                success: true,
-                payload: result.rows,
-            });
+            if (result.rows.length > 0) {
+                dexter.logger.info(`Todo id = ${result.rows[0].id} requested by ${userResult.rows[0].email}`);
+                return response.json({
+                    status: "success",
+                    data: result.rows,
+                });
+            } else {
+                response.status = 400   // Bad Request
+                return response.json({
+                    status: "error",
+                    message: "Invalid todo id"
+                });
+            }
+            
         } else if (pathId === undefined) {
+            // Get all todos created by user
             await client.connect();
             const result = await client.queryObject(`
                 SELECT * FROM todo WHERE user_id = ${userId};
@@ -97,15 +115,10 @@ export class TodoResource extends Drash.Resource {
 
             dexter.logger.info(`All todos requested by ${userResult.rows[0].email}`)
             return response.json({
-                success: true,
-                payload: result.rows,
+                status: "success",
+                data: result.rows,
             });
-        }
-
-        throw new Drash.Errors.HttpError(
-            400,
-            "Resource requires id to be a number"
-        );
+        }        
     }
 
     public async PUT(
@@ -129,26 +142,33 @@ export class TodoResource extends Drash.Resource {
                 RETURNING *;
             `);
 
-            const userResult = await client.queryObject<Users>(`
+            if (result.rows.length > 0) {
+                const userResult = await client.queryObject<Users>(`
                 SELECT * FROM users WHERE id = ${userId};
-            `);
-            await client.end();
+                `);
+                await client.end();
 
-            dexter.logger.info(`Todo id: ${result.rows[0].id} edited by ${userResult.rows[0].email}`);
+                dexter.logger.info(`Todo id: ${result.rows[0].id} edited by ${userResult.rows[0].email}`);
+                return response.json({
+                    status: "success",
+                    data: result.rows,
+                });
+            } else {
+                response.status = 400;
+                return response.json({
+                    status: "error",
+                    message: "No todo list by this id was found."
+                });
+            }
+        } else {
+            response.status = 400;
             return response.json({
-                success: true,
-                payload: result.rows,
+                status: "error",
+                message: "Error processing request. Provide a todo id number"
             });
         }
 
-        response.status = 422;
-        return response.json({
-            errors: {
-                body: {
-                    message: "Error processing request."
-                }
-            }
-        });
+        
     }
 
     public async DELETE(
@@ -166,25 +186,32 @@ export class TodoResource extends Drash.Resource {
                 WHERE id = ${id} AND user_id = ${userId}
                 RETURNING *;
             `);
-            const userResult = await client.queryObject<Users>(`
-                SELECT * FROM users WHERE id = ${userId};
-            `);
-            await client.end();
+
+            if (result.rows.length > 0) {
+                const userResult = await client.queryObject<Users>(`
+                    SELECT * FROM users WHERE id = ${userId};
+                `);
+                await client.end();
+                
+                dexter.logger.info(`Todo id ${result.rows[0].id} deleted by ${userResult.rows[0].email}`);
+                return response.json({
+                    status: "success",
+                    data: null
+                });
+            } else {
+                response.status = 400;
+                return response.json({
+                    status: "error",
+                    message: "No todo list by this id was found"
+                })
+            }
             
-            dexter.logger.info(`Todo id ${result.rows[0].id} deleted by ${userResult.rows[0].email}`);
+        } else {
+            response.status = 400;
             return response.json({
-                success: true,
-                payload: result.rows
+                status: "error",
+                message: "Error processing request. Provide a todo id number"
             });
         }
-
-        response.status = 422;
-        return response.json({
-            errors: {
-                body: {
-                    message: "Error processing request."
-                }
-            }
-        });
     }
 }
