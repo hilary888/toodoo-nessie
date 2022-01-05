@@ -13,10 +13,22 @@ export class LoginResource extends Drash.Resource {
         const plaintextPassword: string | undefined = request.bodyParam("password");
 
         if (email === undefined || plaintextPassword === undefined) {
-            throw new Drash.Errors.HttpError(
-                400,
-                "Email and password must be provided."
-            );
+            const validationResult = {};
+
+            if (email === undefined) {
+                Object.assign(validationResult, {email: "Provide an email address"});
+            }
+
+            if (plaintextPassword === undefined) {
+                Object.assign(validationResult, {password: "Provide a password"});
+            }
+
+
+            response.status = 422   // Unprocessable entity
+            return response.json({
+                status: "fail",
+                data: validationResult
+            });
         }
 
         await client.connect();
@@ -40,23 +52,23 @@ export class LoginResource extends Drash.Resource {
                     key);
                 dexter.logger.info(`Account ${userDetails.email} logged in.`);
                 return response.json({
-                    success: true,
-                    token: jwt,
+                    status: "success",
+                    data: {
+                        token: jwt
+                    }
                 });
             } else {
-                response.status = 401;
+                response.status = 422;  // Unprocessable entity
                 return response.json({
-                    errors: {
-                        body: {
-                            message: "Invalid username or password."
-                        }
-                    }
+                    status: "error",
+                    message: "Invalid username or password"
                 });
             }
         } else {
+            response.status = 422;  // Unauthorized
             return response.json({
-                success: false,
-                error: "No user found for the provided credentials."
+                status: "error",
+                message: "No user found for the provided credentials."
             });
         }
     }

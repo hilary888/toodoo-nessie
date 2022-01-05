@@ -5,7 +5,6 @@ import {
  } from "../deps.ts";
 import { client } from "../db.ts";
 import { Users } from "../models/users_model.ts";
-import * as utils from "../utils.ts";
 import { BaseResource } from "./base_resource.ts";
 
 export class RegisterResource extends BaseResource {
@@ -55,10 +54,8 @@ export class RegisterResource extends BaseResource {
         if (emailExists.rows.length > 0) {
             response.status = 409   // Conflict
             return response.json({
-                status: "fail",
-                data: {
-                    email: "Provided email already exists"
-                }
+                status: "error",
+                message: "Provided email already exists"
             });
         }
 
