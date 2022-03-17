@@ -1,5 +1,4 @@
 import { Drash, bcrypt, create, getNumericDate, dexter } from "../deps.ts";
-import { client } from "../db.ts";
 import { key } from "../utils.ts";
 import { Users } from "../models/users_model.ts";
 export class LoginResource extends Drash.Resource {
@@ -9,17 +8,20 @@ export class LoginResource extends Drash.Resource {
         request: Drash.Request,
         response: Drash.Response
     ): Promise<void> {
-        const email = request.bodyParam("email");
-        const plaintextPassword: string | undefined = request.bodyParam("password");
+        const emailOrUndefined: string | undefined = request.bodyParam("email");
+        const plaintextPasswordOrUndefined: string | undefined = request.bodyParam("password");
+        let email: string;
+        let plaintextPassword: string;
 
-        if (email === undefined || plaintextPassword === undefined) {
+        // Check provided email and password 
+        if (emailOrUndefined === undefined || plaintextPasswordOrUndefined === undefined) {
             const validationResult = {};
 
-            if (email === undefined) {
+            if (emailOrUndefined === undefined) {
                 Object.assign(validationResult, {email: "Provide an email address"});
             }
 
-            if (plaintextPassword === undefined) {
+            if (plaintextPasswordOrUndefined === undefined) {
                 Object.assign(validationResult, {password: "Provide a password"});
             }
 
@@ -29,19 +31,15 @@ export class LoginResource extends Drash.Resource {
                 status: "fail",
                 data: validationResult
             });
+        } else {
+            email = emailOrUndefined!;
+            plaintextPassword = plaintextPasswordOrUndefined!;
         }
 
-        await client.connect();
-        const result = await client.queryObject<Users>(`
-            SELECT * FROM users
-            WHERE email = '${email}'
-            LIMIT 1;
-        `);
-        await client.end();
+        const userDetails: Users = await Users.where({email: email}).first();
 
-        if (result.rows.length > 0) {
-            const userDetails = result.rows[0];
-            const hashedPassword = userDetails.password;
+        if (userDetails !== null) {
+            const hashedPassword: string = userDetails.password?.toString()!;
             const isValidPassword = await bcrypt.compare(plaintextPassword, hashedPassword);
 
             if (isValidPassword) {

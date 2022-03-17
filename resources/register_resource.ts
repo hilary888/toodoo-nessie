@@ -3,7 +3,6 @@ import {
     bcrypt, 
     dexter,
  } from "../deps.ts";
-import { client, db } from "../db.ts";
 import { Users } from "../models/users_model.ts";
 import { BaseResource } from "./base_resource.ts";
 
