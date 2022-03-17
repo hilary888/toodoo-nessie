@@ -3,7 +3,7 @@ import {
     bcrypt, 
     dexter,
  } from "../deps.ts";
-import { client } from "../db.ts";
+import { client, db } from "../db.ts";
 import { Users } from "../models/users_model.ts";
 import { BaseResource } from "./base_resource.ts";
 
@@ -14,25 +14,28 @@ export class RegisterResource extends BaseResource {
         request: Drash.Request,
         response: Drash.Response
     ): Promise<void> {
-        // Get json values from request
-        const username: string | undefined = request.bodyParam("username");
-        const email: string | undefined = request.bodyParam("email");
-        const password: string | undefined = request.bodyParam("password");
+        // Get values from request
+        const usernameOrUndefined: string | undefined = request.bodyParam("username");
+        const emailOrUndefined: string | undefined = request.bodyParam("email");
+        const passwordOrUndefined: string | undefined = request.bodyParam("password");
+        let username: string;
+        let email: string;
+        let password: string;
 
         // Check if values provided are valid
-        if(!this.validateUsername(username) || !this.validateEmail(email) || !this.validatePassword(password)) {
+        if(!this.validateUsername(usernameOrUndefined) || !this.validateEmail(emailOrUndefined) || !this.validatePassword(passwordOrUndefined)) {
             // Append message to validationResult for every invalid value
             let validationResult = {};
             
-            if(!this.validateUsername(username)) {
+            if(!this.validateUsername(usernameOrUndefined)) {
                 Object.assign(validationResult, {username: `A username must be provided`});
             }
 
-            if (!this.validateEmail(email)) {
+            if (!this.validateEmail(emailOrUndefined)) {
                 Object.assign(validationResult, {email: `An email must be provided`});
             }
 
-            if (!this.validatePassword(password)) {
+            if (!this.validatePassword(passwordOrUndefined)) {
                 Object.assign(validationResult, {password: `A password of at least length 8 must be provided`});
             }
 
@@ -41,17 +44,16 @@ export class RegisterResource extends BaseResource {
                 status: "fail",
                 data: validationResult
             });
+        } else {
+            username = usernameOrUndefined!;
+            email = emailOrUndefined!;
+            password = passwordOrUndefined!;
         }
 
         // Check if email already exists in users table
-        await client.connect();
-        const emailExists = await client.queryObject(`
-            SELECT * FROM users
-            WHERE email = '${email}';
-        `);
-        await client.end();
+        const emailExists = await Users.where({email: email}).count() > 0;
 
-        if (emailExists.rows.length > 0) {
+        if (emailExists) {
             response.status = 409   // Conflict
             return response.json({
                 status: "error",
@@ -62,20 +64,19 @@ export class RegisterResource extends BaseResource {
         // Create user account
         const validPassword: string = password!;
         const hashedPassword = await bcrypt.hash(validPassword);
-        await client.connect();
-        const result = await client.queryObject<Users>(`
-            INSERT INTO users (username, email, password)
-            VALUES ('${username}', '${email}', '${hashedPassword}')
-            RETURNING *;
-        `);
-        await client.end();
+        
+        const result = await Users.create({
+            username: username,
+            email: email,
+            password: hashedPassword,
+        });
 
-        if (result.rows.length > 0) {
-            const userDetails = result.rows[0];
+        if (result !== null) {
+            const userDetails = result;
             dexter.logger.info(`Account created for ${userDetails.email}`)
             return response.json({
                 status: "success",
-                data: result.rows
+                data: result,
             });
         } else {
             dexter.logger.error(`Account creation for ${email} failed`);
