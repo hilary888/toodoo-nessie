@@ -6,7 +6,6 @@ import { Todo } from "../models/todo_model.ts";
 
 export class TodoResource extends Drash.Resource {
     public paths = [
-        "/todo",
         "/todo/:id"
     ];
 
@@ -18,60 +17,6 @@ export class TodoResource extends Drash.Resource {
     }
 
     
-    public async POST(
-        request: Drash.Request,
-        response: Drash.Response
-    ): Promise<void> {
-        const titleOrUndefined: string | undefined = request.bodyParam("title");
-        const bodyOrUndefined: string | undefined = request.bodyParam("body");
-        const payload = await getJwtPayload(request);
-        const userIdOrUndefined: string | undefined = payload.sub;
-        let title: string;
-        let body: string;
-        let userId: number;
-
-
-        if (titleOrUndefined === undefined || bodyOrUndefined === undefined || userIdOrUndefined === undefined) {
-            const validationResult = {};
-
-            if (titleOrUndefined === undefined) {
-                Object.assign(validationResult, {title: "Provide title for todo list"});
-            }
-
-            if (bodyOrUndefined === undefined) {
-                Object.assign(validationResult, {body: "Provide body for todo list"});
-            }
-
-            if (userIdOrUndefined === undefined) {
-                Object.assign(validationResult, {body: "User id not provided in token"});
-            }
-
-            response.status = 422
-            return response.json({
-                status: "fail",
-                data: validationResult
-            });
-        } else {
-            title = titleOrUndefined!;
-            body = bodyOrUndefined!;
-            userId = Number(userIdOrUndefined);
-        }
-
-        const result = await Todo.create({
-            title: title,
-            body: body,
-            userId: userId,
-        });
-        const userResult = await Todo.where({id: result.id?.toString()!}).user();
-        
-
-        dexter.logger.info(`New todo created by ${userResult.email}. id = ${result.id}`);
-        return response.json({
-            status: "success",
-            data: result,
-        });
-
-    }
 
     public async GET(
         request: Drash.Request,
@@ -88,18 +33,16 @@ export class TodoResource extends Drash.Resource {
                 id: id,
                 userId: userId, 
             }).first();
-            console.log(result);
 
             if (result !== null) {
                 const userResult = await Todo.where({id: Number(result.id)}).user();
-                console.log("userResult: ", userResult);
                 dexter.logger.info(`Todo id = ${result.id} requested by ${userResult.email}`);
                 return response.json({
                     status: "success",
                     data: result,
                 });
             } else {
-                response.status = 400   // Bad Request
+                response.status = 400;   // Bad Request
                 return response.json({
                     status: "error",
                     message: "Invalid todo id"
@@ -107,14 +50,10 @@ export class TodoResource extends Drash.Resource {
             }
             
         } else if (pathId === undefined) {
-            // Get all todos created by user
-            const result = await Todo.where({userId: userId}).get();
-            const userResult = await User.where({id: Number(userId)}).first();
-
-            dexter.logger.info(`All todos requested by ${userResult.email}`)
+            response.status = 400;
             return response.json({
-                status: "success",
-                data: result,
+                status: "error",
+                message: "Error processing request. Provide a todo id number"
             });
         }        
     }
@@ -174,7 +113,6 @@ export class TodoResource extends Drash.Resource {
         if(pathId !== undefined && !isNaN(id)) {
             
             const todo = await Todo.deleteById(id);
-            console.log("deleted: ", todo);
 
             if (todo !== null) {
                 

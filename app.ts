@@ -3,6 +3,7 @@ import { HomeResource } from "./resources/home_resource.ts";
 import { TodoResource } from "./resources/todo_resource.ts";
 import { RegisterResource } from "./resources/register_resource.ts";
 import { LoginResource } from "./resources/login_resource.ts";
+import { TodosResource } from "./resources/todos_resource.ts";
 import { db } from "./db.ts";
 import { User } from "./models/user_model.ts";
 import { Todo } from "./models/todo_model.ts";
@@ -16,6 +17,7 @@ const server = new Drash.Server({
   resources: [
     HomeResource,
     TodoResource,
+    TodosResource,
     RegisterResource,
     LoginResource,
   ],
