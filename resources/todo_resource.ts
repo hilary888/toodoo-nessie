@@ -1,8 +1,7 @@
 import { Drash, dexter } from "../deps.ts";
-import { client } from "../db.ts";
 import { AuthorizationService } from "../services/authorization_service.ts";
 import { getJwtPayload } from "../utils.ts";
-import { Users } from "../models/users_model.ts";
+import { User } from "../models/user_model.ts";
 import { Todo } from "../models/todo_model.ts";
 
 export class TodoResource extends Drash.Resource {
@@ -23,21 +22,28 @@ export class TodoResource extends Drash.Resource {
         request: Drash.Request,
         response: Drash.Response
     ): Promise<void> {
-        const title = request.bodyParam("title");
-        const body = request.bodyParam("body");
+        const titleOrUndefined: string | undefined = request.bodyParam("title");
+        const bodyOrUndefined: string | undefined = request.bodyParam("body");
         const payload = await getJwtPayload(request);
-        const userId = payload.sub;
+        const userIdOrUndefined: string | undefined = payload.sub;
+        let title: string;
+        let body: string;
+        let userId: number;
 
 
-        if (title === undefined || body === undefined) {
+        if (titleOrUndefined === undefined || bodyOrUndefined === undefined || userIdOrUndefined === undefined) {
             const validationResult = {};
 
-            if (title === undefined) {
+            if (titleOrUndefined === undefined) {
                 Object.assign(validationResult, {title: "Provide title for todo list"});
             }
 
-            if (body === undefined) {
+            if (bodyOrUndefined === undefined) {
                 Object.assign(validationResult, {body: "Provide body for todo list"});
+            }
+
+            if (userIdOrUndefined === undefined) {
+                Object.assign(validationResult, {body: "User id not provided in token"});
             }
 
             response.status = 422
@@ -45,26 +51,24 @@ export class TodoResource extends Drash.Resource {
                 status: "fail",
                 data: validationResult
             });
+        } else {
+            title = titleOrUndefined!;
+            body = bodyOrUndefined!;
+            userId = Number(userIdOrUndefined);
         }
 
-        await client.connect();
-        const result = await client.queryObject<Todo>(`
-            INSERT INTO todo (title, body, user_id)
-            VALUES ('${title}', '${body}', ${userId})
-            RETURNING *;
-        `);
-
-        const userResult = await client.queryObject<Users>(`
-            SELECT * FROM users WHERE id = ${userId};
-        `);
-        await client.end();
-
+        const result = await Todo.create({
+            title: title,
+            body: body,
+            userId: userId,
+        });
+        const userResult = await Todo.where({id: result.id?.toString()!}).user();
         
 
-        dexter.logger.info(`New todo created by ${userResult.rows[0].email}. id = ${result.rows[0].id}`);
+        dexter.logger.info(`New todo created by ${userResult.email}. id = ${result.id}`);
         return response.json({
             status: "success",
-            data: result.rows,
+            data: result,
         });
 
     }
@@ -76,26 +80,23 @@ export class TodoResource extends Drash.Resource {
         const pathId = request.pathParam("id");
         const id = Number(pathId);
         const payload = await getJwtPayload(request);
-        const userId = payload.sub;
-        await client.connect();
-        const userResult = await client.queryObject<Users>(`
-            SELECT * FROM users WHERE id = ${userId};
-        `);
-        await client.end();
+        const userId = payload.sub!;
 
         if(pathId !== undefined && !isNaN(id)) {
             // Get a specific todo created by user
-            await client.connect();
-            const result = await client.queryObject<Todo>(`
-                SELECT * FROM todo WHERE id = ${id} AND user_id = ${userId};
-            `);
-            await client.end();
+            const result = await Todo.where({
+                id: id,
+                userId: userId, 
+            }).first();
+            console.log(result);
 
-            if (result.rows.length > 0) {
-                dexter.logger.info(`Todo id = ${result.rows[0].id} requested by ${userResult.rows[0].email}`);
+            if (result !== null) {
+                const userResult = await Todo.where({id: Number(result.id)}).user();
+                console.log("userResult: ", userResult);
+                dexter.logger.info(`Todo id = ${result.id} requested by ${userResult.email}`);
                 return response.json({
                     status: "success",
-                    data: result.rows,
+                    data: result,
                 });
             } else {
                 response.status = 400   // Bad Request
@@ -107,16 +108,13 @@ export class TodoResource extends Drash.Resource {
             
         } else if (pathId === undefined) {
             // Get all todos created by user
-            await client.connect();
-            const result = await client.queryObject(`
-                SELECT * FROM todo WHERE user_id = ${userId};
-            `);
-            await client.end();
+            const result = await Todo.where({userId: userId}).get();
+            const userResult = await User.where({id: Number(userId)}).first();
 
-            dexter.logger.info(`All todos requested by ${userResult.rows[0].email}`)
+            dexter.logger.info(`All todos requested by ${userResult.email}`)
             return response.json({
                 status: "success",
-                data: result.rows,
+                data: result,
             });
         }        
     }
@@ -127,31 +125,25 @@ export class TodoResource extends Drash.Resource {
     ): Promise<void> {
         const pathId = request.pathParam("id");
         const id = Number(pathId);
-        const title = request.bodyParam("title");
-        const body = request.bodyParam("body");
+        const title: string = request.bodyParam("title")!;
+        const body: string = request.bodyParam("body")!;
         const userId = await getJwtPayload(request).then(value => value.sub);
 
         if(pathId !== undefined && !isNaN(id)) {
-            await client.connect();
-            const result = await client.queryObject<Todo>(`
-                UPDATE todo
-                SET title = '${title}',
-                    body = '${body}',
-                    updated_at = current_timestamp
-                WHERE id = ${id} AND user_id = ${userId}
-                RETURNING *;
-            `);
+            // Update todo
+            await Todo.where({id: id, userId: userId!}).update({
+                title: title,
+                body: body,
+            });
+            const todo: Todo = await Todo.find(id);
 
-            if (result.rows.length > 0) {
-                const userResult = await client.queryObject<Users>(`
-                SELECT * FROM users WHERE id = ${userId};
-                `);
-                await client.end();
+            if (todo !== null) {
+                const user = await User.where({id: userId!}).first();
 
-                dexter.logger.info(`Todo id: ${result.rows[0].id} edited by ${userResult.rows[0].email}`);
+                dexter.logger.info(`Todo id: ${todo.id} edited by ${user.email}`);
                 return response.json({
                     status: "success",
-                    data: result.rows,
+                    data: todo,
                 });
             } else {
                 response.status = 400;
@@ -180,23 +172,17 @@ export class TodoResource extends Drash.Resource {
         const userId = await getJwtPayload(request).then(value => value.sub);
 
         if(pathId !== undefined && !isNaN(id)) {
-            await client.connect();
-            const result = await client.queryObject<Todo>(`
-                DELETE FROM todo
-                WHERE id = ${id} AND user_id = ${userId}
-                RETURNING *;
-            `);
+            
+            const todo = await Todo.deleteById(id);
+            console.log("deleted: ", todo);
 
-            if (result.rows.length > 0) {
-                const userResult = await client.queryObject<Users>(`
-                    SELECT * FROM users WHERE id = ${userId};
-                `);
-                await client.end();
+            if (todo !== null) {
                 
-                dexter.logger.info(`Todo id ${result.rows[0].id} deleted by ${userResult.rows[0].email}`);
+                const user = await User.find(userId!);
+                
+                dexter.logger.info(`Todo id ${id} deleted by ${user.email}`);
                 return response.json({
                     status: "success",
-                    data: null
                 });
             } else {
                 response.status = 400;

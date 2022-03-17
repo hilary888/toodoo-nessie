@@ -1,10 +1,11 @@
-import { envConfig, Drash, dexter } from "./deps.ts";
-// import { HomeResource } from "./resources/home_resource.ts";
-// import { TodoResource } from "./resources/todo_resource.ts";
+import { envConfig, Drash, dexter, Relationships } from "./deps.ts";
+import { HomeResource } from "./resources/home_resource.ts";
+import { TodoResource } from "./resources/todo_resource.ts";
 import { RegisterResource } from "./resources/register_resource.ts";
 import { LoginResource } from "./resources/login_resource.ts";
 import { db } from "./db.ts";
-import { Users } from "./models/users_model.ts";
+import { User } from "./models/user_model.ts";
+import { Todo } from "./models/todo_model.ts";
 
 const env = envConfig();
 
@@ -13,8 +14,8 @@ const server = new Drash.Server({
   port: Number(env.PORT),
   protocol: "http",
   resources: [
-    // HomeResource,
-    // TodoResource,
+    HomeResource,
+    TodoResource,
     RegisterResource,
     LoginResource,
   ],
@@ -24,8 +25,10 @@ const server = new Drash.Server({
 });
 
 // denodb link models to db tables
+Relationships.belongsTo(Todo, User);
 db.link([
-  Users,
+  User,
+  Todo,
 ]);
 
 

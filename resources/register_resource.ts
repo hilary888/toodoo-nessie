@@ -3,7 +3,7 @@ import {
     bcrypt, 
     dexter,
  } from "../deps.ts";
-import { Users } from "../models/users_model.ts";
+import { User } from "../models/user_model.ts";
 import { BaseResource } from "./base_resource.ts";
 
 export class RegisterResource extends BaseResource {
@@ -50,7 +50,7 @@ export class RegisterResource extends BaseResource {
         }
 
         // Check if email already exists in users table
-        const emailExists = await Users.where({email: email}).count() > 0;
+        const emailExists = await User.where({email: email}).count() > 0;
 
         if (emailExists) {
             response.status = 409   // Conflict
@@ -64,7 +64,7 @@ export class RegisterResource extends BaseResource {
         const validPassword: string = password!;
         const hashedPassword = await bcrypt.hash(validPassword);
         
-        const result = await Users.create({
+        const result = await User.create({
             username: username,
             email: email,
             password: hashedPassword,

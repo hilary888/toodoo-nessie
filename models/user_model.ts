@@ -1,7 +1,7 @@
 import {Model, DataTypes} from "../deps.ts";
 
-export class Users extends Model {
-    static table = 'users';
+export class User extends Model {
+    static table = "users";
     static timestamps = true;
 
     static fields = {
@@ -12,14 +12,17 @@ export class Users extends Model {
         username: {
             type: DataTypes.STRING,
             allowNull: false,
+            length: 255,
         },
         email: {
             type: DataTypes.STRING, 
             allowNull: false,
+            length: 255,
         },
         password: {
             allowNull: false,
             type: DataTypes.STRING,
-        },
+            length: 255,
+        }
     }
 }

@@ -1,6 +1,6 @@
 import { Drash, bcrypt, create, getNumericDate, dexter } from "../deps.ts";
 import { key } from "../utils.ts";
-import { Users } from "../models/users_model.ts";
+import { User } from "../models/user_model.ts";
 export class LoginResource extends Drash.Resource {
     public paths = ["/login"];
 
@@ -36,7 +36,7 @@ export class LoginResource extends Drash.Resource {
             plaintextPassword = plaintextPasswordOrUndefined!;
         }
 
-        const userDetails: Users = await Users.where({email: email}).first();
+        const userDetails: User = await User.where({email: email}).first();
 
         if (userDetails !== null) {
             const hashedPassword: string = userDetails.password?.toString()!;

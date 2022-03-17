@@ -6,7 +6,7 @@ export {
   AbstractMigration,
   ClientPostgreSQL,
 } from "https://deno.land/x/nessie@2.0.4/mod.ts";
-export { DataTypes, Database, Model, PostgresConnector } from 'https://deno.land/x/denodb@v1.0.40/mod.ts';
+export { DataTypes, Database, Model, PostgresConnector, Relationships } from 'https://deno.land/x/denodb@v1.0.40/mod.ts';
 
 
 export type {
